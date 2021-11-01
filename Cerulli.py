@@ -36,7 +36,6 @@ def loopContainer(queue, i):
         set_velocity = [0,0,0]
         initial_set = [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
         ret[set_list_index] = initial_set # return thread result
-        # print(initial_set) # test print [working]
     queue.put(ret) # return process result
 
 
@@ -60,8 +59,6 @@ def iMass(i, ii): # assign mass
 
 
 def coreFunction(shared_list, history, core, frame):
-    #aim = queue.get()
-    #print(history[3])
 
     for focus in range(core[0], core[1]): # total indicies counted here
         focus_object = history[focus] # and call its values
@@ -74,10 +71,9 @@ def coreFunction(shared_list, history, core, frame):
             acceleration_vector = nSumVector(focus_object, target_object, result_distance, acceleration_vector) # find acceleration between focus and n targets
 
             # add additional interactions here
+            
         velocity_vector = focus_object[6]
         location = focus_object[5]
-        
-        #print(velocity_vector[2]) # working
 
         velocity_delta = nDeltaTime(acceleration_vector, velocity_vector)
         
@@ -95,7 +91,6 @@ def coreFunction(shared_list, history, core, frame):
         set_velocity = velocity_delta
         aim[focus] = [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
         shared_list.append(aim[focus])
-    #queue.put(aim)
 
 
 def nQueue(i, ii): # assign iterations
@@ -110,7 +105,7 @@ def nPythagorean(f, t):
 
 def nSumVector(f, t, ret_distance, acceleration_vector_sum):
     acceleration_vector = [0,0,0]
-    for i in range(3): # where range is dimensions of gravity # ret_distance**3
+    for i in range(3): ## ret_distance**3
         newton = (-1) * ((ce_constant['ngc']) * (t[3]) * (f[5][i] - t[5][i])) / (ret_distance**3) # VARIABLE E ...  + (.0000000000000002**2))**(3/2)
         acceleration_vector[i] = newton
     new_vector = [acceleration_vector[0] + acceleration_vector_sum[0], 
@@ -133,12 +128,6 @@ def nLocationUpdate(location, velocity):
     return new_location
 
 
-#def qPythagorean(t, f):
-#    if ttl_r > abs(t[3][0] - f[3][0]) and ttl_r > abs(t[3][1] - f[3][1]) and ttl_r > abs(t[3][2] - f[3][2]): 
-#        close_enough = True
-#    return close_enough
-
-
 if __name__ == "__main__":
     queue = mp.Manager().Queue()
     ret = {}
@@ -155,10 +144,7 @@ if __name__ == "__main__":
         p.join()
     ret = queue.get()
     updated_list_of_values = list(ret.values())
-    #print(history)
-    #ret = list(ret.values()) # fixed when 'ret' is a list, otherwise convert the dict into list
-
-
+    
     core = []
     processes_n = []
     #queue.put(aim)
@@ -186,12 +172,6 @@ if __name__ == "__main__":
         
         print(updated_list_of_values[3]) # test print
 
-    #export_data_set = list(export_data_set)
-    #print(export_data_set)
-    #export_data_set = list(export_data_set.items())
-    #print(export_data_set) # test print
     pd_dataframe = pd.DataFrame(export_data_set, columns=["frame", "name", "type", "mass", "radius", "location", "velocity"])
     pd_dataframe.to_csv(r'C:\data.csv')
-    print("end1")
-    print("end2")
-# breakpoint end   [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
+    print("done")
