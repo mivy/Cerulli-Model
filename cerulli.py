@@ -5,17 +5,18 @@ import math
 import numpy as np
 import multiprocessing as mp
 
-from numpy.random.mtrand import f
-
 
 ce_constant = {
     'ngc' : float(6.674080000e-11),      # 6.67408e-11  
-    'e' : 100,                          #
+    'e' : .00002,                          #
     'frame_interval' : 1,               #
-    'frame_total' : 100,                 #
+    'frame_total' : 720,                 #
     'time' : 1,                         #
-    'processes_nodes' : 40,             # 4, 40
-    'samples' : 250,                    # 250, 250
+    'processes_nodes' : 6,             # 4, 40
+    'samples' : 288,                    # 250, 250
+    'mass_scalar' : 100,
+    'mass_distribution' : 15,           # between 0 (only dark matter) and 99 (absent of dark matter) %
+    'radius_scalar' : .001,
     }                        # samples: # 1_000, 10_000
 aim = {}
 
@@ -31,18 +32,19 @@ def loopContainer(queue, i):
         set_name = f'n_{set_list_index}'
         set_type = iType(initialize_kmass, initialize_random)
         set_mass = iMass(set_type, initialize_kmass)
-        set_visual_radius = initialize_kmass * .01 # object volume (see: bpy)
+        set_visual_radius = abs(set_mass) * (1 / (ce_constant['mass_scalar'] * ce_constant['radius_scalar'])) # object volume (see: bpy)
         set_location = [initialize_normal[0], initialize_normal[1], initialize_normal[2]]
         set_velocity = [0,0,0]
         initial_set = [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
         ret[set_list_index] = initial_set # return thread result
+        # print(initial_set) # test print [working]
     queue.put(ret) # return process result
 
 
 def iType(i, ii): # assign types
     if i > 3: #
         m = 'unsigned'
-    elif ii <= 80: # 15 universally
+    elif ii <= ce_constant['mass_distribution']: # 15 universally
         m = 'positive'
     else:
         m = 'negative'
@@ -54,12 +56,11 @@ def iMass(i, ii): # assign mass
         ii = (ii + 1) * ((ii + 4) / 2) # about 10 sm
     elif i == 'negative':
         ii = ii * (-1) # reductive
-    ii = ii * 100000
+    ii = ii * ce_constant['mass_scalar']
     return ii
 
 
 def coreFunction(shared_list, history, core, frame):
-
     for focus in range(core[0], core[1]): # total indicies counted here
         focus_object = history[focus] # and call its values
         acceleration_vector = [0,0,0] # formatting (check function)
@@ -74,6 +75,8 @@ def coreFunction(shared_list, history, core, frame):
             
         velocity_vector = focus_object[6]
         location = focus_object[5]
+        
+        #print(velocity_vector[2]) # working
 
         velocity_delta = nDeltaTime(acceleration_vector, velocity_vector)
         
@@ -91,6 +94,7 @@ def coreFunction(shared_list, history, core, frame):
         set_velocity = velocity_delta
         aim[focus] = [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
         shared_list.append(aim[focus])
+    #queue.put(aim)
 
 
 def nQueue(i, ii): # assign iterations
@@ -105,8 +109,8 @@ def nPythagorean(f, t):
 
 def nSumVector(f, t, ret_distance, acceleration_vector_sum):
     acceleration_vector = [0,0,0]
-    for i in range(3): ## ret_distance**3
-        newton = (-1) * ((ce_constant['ngc']) * (t[3]) * (f[5][i] - t[5][i])) / (ret_distance**3) # VARIABLE E ...  + (.0000000000000002**2))**(3/2)
+    for i in range(3): # where range is dimensions of gravity # ret_distance**3
+        newton = (-1) * ((ce_constant['ngc']) * (t[3]) * (f[5][i] - t[5][i])) / ( ( (ret_distance ** 2) + (ce_constant['e'] ** 2) ) ** (3/2) ) 
         acceleration_vector[i] = newton
     new_vector = [acceleration_vector[0] + acceleration_vector_sum[0], 
     acceleration_vector[1] + acceleration_vector_sum[1], 
@@ -133,7 +137,7 @@ if __name__ == "__main__":
     ret = {}
     export_data_set = []
     updated_list_of_values = []
-
+    print("initializing...")
     processes_n = []
     queue.put(ret)
     for i in range(ce_constant['processes_nodes']):
@@ -144,10 +148,10 @@ if __name__ == "__main__":
         p.join()
     ret = queue.get()
     updated_list_of_values = list(ret.values())
-    
+    print("done initializing ... now rendering frame(s)")
+
     core = []
     processes_n = []
-    #queue.put(aim)
     sample_sum = ce_constant['processes_nodes'] * ce_constant['samples']
     for i in range(ce_constant['processes_nodes']):
         i_process_sum = ce_constant['samples'] * i
@@ -173,5 +177,6 @@ if __name__ == "__main__":
         print(updated_list_of_values[3]) # test print
 
     pd_dataframe = pd.DataFrame(export_data_set, columns=["frame", "name", "type", "mass", "radius", "location", "velocity"])
-    pd_dataframe.to_csv(r'C:\data.csv')
-    print("done")
+    pd_dataframe.to_csv(r'C:\Shared Folder\Cerulli Datasets\data_7.csv')
+    print("done with animation")
+
