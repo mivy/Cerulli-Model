@@ -91,7 +91,7 @@ if __name__ == "__main__":
     
     print("reading csv...")
 
-    df = pd.read_csv('C:\Shared Folder\Cerulli Datasets\data5.csv', sep=",", header=[0], )
+    df = pd.read_csv('C:\data.csv', sep=",", header=[0], )
     dataset_main = df.to_dict('index')
 
     
