@@ -177,6 +177,6 @@ if __name__ == "__main__":
         print(updated_list_of_values[3]) # test print
 
     pd_dataframe = pd.DataFrame(export_data_set, columns=["frame", "name", "type", "mass", "radius", "location", "velocity"])
-    pd_dataframe.to_csv(r'C:\Shared Folder\Cerulli Datasets\data_7.csv')
+    pd_dataframe.to_csv(r'C:\data.csv')
     print("done with animation")
 
