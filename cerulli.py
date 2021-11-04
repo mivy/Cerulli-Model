@@ -12,7 +12,7 @@ ce_constant = {
     'frame_interval' : 1,               #
     'frame_total' : 720,                 #
     'time' : 1,                         #
-    'processes_nodes' : 6,             # 4, 40
+    'processes_nodes' : 4,             # 4, 40
     'samples' : 288,                    # 250, 250
     'mass_scalar' : 100,
     'mass_distribution' : 15,           # between 0 (only dark matter) and 99 (absent of dark matter) %
