@@ -145,7 +145,6 @@ if __name__ == "__main__":
             return_list_temp.append([anim_set[m][1], anim_set[m][2], anim_set[m][3], anim_set[m][4], anim_set[m][5], anim_set[m][6], anim_set[m][7], anim_set[m][8], anim_set[m][9]])
         init_l = return_list_temp
         print("done with frame", frame) # print
-        print(init_l[3]) # test print
     pd_dataframe = pd.DataFrame(export_data, columns=["frame", "name", "x", "y", "z"])
     pd_dataframe.to_csv(r'C:\anim1.csv')
     print("done with animation") # print
