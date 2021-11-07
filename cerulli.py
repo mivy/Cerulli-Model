@@ -12,8 +12,8 @@ const = {
     'frame_interval' : 1,               #
     'frame_total' : 60,                 #
     'time' : 1,                         #
-    'processes_nodes' : 1,             #
-    'samples' : 6,                    #
+    'processes_nodes' : 10,             #
+    'samples' : 100,                    #
     'mass_p_law' : -4.5,                #
     'mass_scalar' : 100000,             #
     'location_scalar' : 3,              #
