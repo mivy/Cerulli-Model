@@ -6,177 +6,146 @@ import numpy as np
 import multiprocessing as mp
 
 
-ce_constant = {
-    'ngc' : float(6.674080000e-11),      # 6.67408e-11  
-    'e' : .00002,                          #
+const = {
+    'newton' : float(6.674080000e-11),  # 6.67408e-11  
+    'e' : .11,                          #
     'frame_interval' : 1,               #
-    'frame_total' : 720,                 #
+    'frame_total' : 40,                 #
     'time' : 1,                         #
-    'processes_nodes' : 4,             # 4, 40
-    'samples' : 288,                    # 250, 250
-    'mass_scalar' : 100,
-    'mass_distribution' : 15,           # between 0 (only dark matter) and 99 (absent of dark matter) %
-    'radius_scalar' : .001,
-    }                        # samples: # 1_000, 10_000
-aim = {}
+    'processes_nodes' : 10,             #
+    'samples' : 100,                    #
+    'mass_p_law' : -4.5,                #
+    'mass_scalar' : 100000,             #
+    'location_scalar' : 3,              #
+    'velocity_scalar' : 1,              #
+    'radius_scalar' : .00001,           # includes radius for volume scatter shader //i.e. cosmic dust
+    }
 
 
-def loopContainer(queue, i):
-    ret = queue.get()
-    for k in range(ce_constant['samples']): # total indicies counted here
-        set_list_index = nQueue(i, k) # counter for the name trait
-        initialize_normal = np.random.default_rng().standard_normal(4) # 
-        initialize_kmass = abs(initialize_normal[3]) # base value for mass distribution
-        initialize_random = np.random.randint(99)
-        set_frame = 0
-        set_name = f'n_{set_list_index}'
-        set_type = iType(initialize_kmass, initialize_random)
-        set_mass = iMass(set_type, initialize_kmass)
-        set_visual_radius = abs(set_mass) * (1 / (ce_constant['mass_scalar'] * ce_constant['radius_scalar'])) # object volume (see: bpy)
-        set_location = [initialize_normal[0], initialize_normal[1], initialize_normal[2]]
-        set_velocity = [0,0,0]
-        initial_set = [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
-        ret[set_list_index] = initial_set # return thread result
-        # print(initial_set) # test print [working]
-    queue.put(ret) # return process result
-
-
-def iType(i, ii): # assign types
-    if i > 3: #
-        m = 'unsigned'
-    elif ii <= ce_constant['mass_distribution']: # 15 universally
-        m = 'positive'
-    else:
-        m = 'negative'
-    return m
-
-
-def iMass(i, ii): # assign mass
-    if i == 'unsigned':
-        ii = (ii + 1) * ((ii + 4) / 2) # about 10 sm
-    elif i == 'negative':
-        ii = ii * (-1) # reductive
-    ii = ii * ce_constant['mass_scalar']
-    return ii
-
-
-def coreFunction(shared_list, history, core, frame):
-    for focus in range(core[0], core[1]): # total indicies counted here
-        focus_object = history[focus] # and call its values
-        acceleration_vector = [0,0,0] # formatting (check function)
-        for target in range(len(history)): # compares to all other indices
-            if focus == target: # but not itself
-                continue
-            target_object = history[target]
-            result_distance = nPythagorean(focus_object, target_object)
-            acceleration_vector = nSumVector(focus_object, target_object, result_distance, acceleration_vector) # find acceleration between focus and n targets
-
-            # add additional interactions here
-            
-        velocity_vector = focus_object[6]
-        location = focus_object[5]
-        
-        #print(velocity_vector[2]) # working
-
-        velocity_delta = nDeltaTime(acceleration_vector, velocity_vector)
-        
-        location_delta = nLocationUpdate(location, velocity_delta)
-        
-    
-        
-
-        set_frame = frame
-        set_name = focus_object[1]
-        set_type = focus_object[2]
-        set_mass = focus_object[3]
-        set_visual_radius = focus_object[4]
-        set_location = location_delta
-        set_velocity = velocity_delta
-        aim[focus] = [set_frame, set_name, set_type, set_mass, set_visual_radius, set_location, set_velocity]
-        shared_list.append(aim[focus])
-    #queue.put(aim)
-
-
-def nQueue(i, ii): # assign iterations
-    init_i = ii * (ce_constant['processes_nodes']) + i
+def index_counter(i, ii): # assign indicies for init and anim
+    init_i = ii * (const['processes_nodes']) + i
     return init_i
 
 
-def nPythagorean(f, t):
-    p_distance = math.sqrt(((t[5][0] - f[5][0])**2) + ((t[5][1] - f[5][1])**2) + ((t[5][2] - f[5][2])**2))
-    return p_distance
+def init_dataset(queue, i): # columns=["name", "type", "mass", "radius", "lx", "ly", "lz", deltax, deltay, deltaz]
+    ret = queue.get()
+    for k in range(const['samples']): # total indicies counted here
+        list_index = index_counter(i, k) # counter for the name trait
+        set_name = f'n_{list_index}'
+        set_mass = mass_distribution()
+        set_vrad = abs(set_mass) * const['radius_scalar']
+        coord_i = np.random.default_rng().standard_normal() * const['location_scalar']
+        coord_j = np.random.default_rng().standard_normal() * const['location_scalar']
+        coord_k = np.random.default_rng().standard_normal() * const['location_scalar']
+        delta_x = 0 # coord_i * const['velocity_scalar']
+        delta_y = 0 # coord_j * const['velocity_scalar']
+        delta_z = 0 # coord_k * const['velocity_scalar']
+        initial_set = [set_name, set_mass, set_vrad, coord_i, coord_j, coord_k, delta_x, delta_y, delta_z]
+        ret[list_index] = initial_set # return thread result
+    queue.put(ret) # return process result
 
 
-def nSumVector(f, t, ret_distance, acceleration_vector_sum):
-    acceleration_vector = [0,0,0]
-    for i in range(3): # where range is dimensions of gravity # ret_distance**3
-        newton = (-1) * ((ce_constant['ngc']) * (t[3]) * (f[5][i] - t[5][i])) / ( ( (ret_distance ** 2) + (ce_constant['e'] ** 2) ) ** (3/2) ) 
-        acceleration_vector[i] = newton
-    new_vector = [acceleration_vector[0] + acceleration_vector_sum[0], 
-    acceleration_vector[1] + acceleration_vector_sum[1], 
-    acceleration_vector[2] + acceleration_vector_sum[2]]
-    return new_vector
+def mass_distribution(): # truncated power law for m
+    x = abs(np.random.default_rng().standard_normal())
+    t = 1 + 1 / x ** const['mass_p_law']
+    t = t * const['mass_scalar']
+    return t
 
 
-def nDeltaTime(acceleration_vector, velocity_vector):
-    delta_v = [0,0,0]
-    for i in range(3):
-        delta_v[i] =  ((ce_constant['time']**2) * acceleration_vector[i]) + (velocity_vector[i] * ce_constant['time'])
-    return delta_v
+def anim_dataset(queue, history, core, frame): # columns=["frame", "name", "vx", "vy", "vz"] previous_set, anim_set, 
+    anim_set = queue.get()
+    for focus in range(core[0], core[1]): # total indicies counted here
+        focus_obj = history[focus] # and call its values
+        grav_x = 0 # reset gravity 
+        grav_y = 0 # while new f
+        grav_z = 0
+        x = focus_obj[3] # focus location 
+        y = focus_obj[4] # variables
+        z = focus_obj[5]
+        for target in range(len(history)): # compares to all other indices
+            if focus == target: # but not itself
+                continue
+            target_obj = history[target]
+            dm = target_obj[1] # target mass and
+            dx = target_obj[3] # location variables
+            dy = target_obj[4]
+            dz = target_obj[5]
+            dist = pythagorean(x, y, z, dx, dy, dz) 
+            grav_x = vector_gravity(dm, x, dx, dist) + grav_x # gravitational influiences
+            grav_y = vector_gravity(dm, y, dy, dist) + grav_y # on f for range t
+            grav_z = vector_gravity(dm, z, dz, dist) + grav_z
+        delta_x = grav_x*const['time']**2+focus_obj[6]*const['time'] # new velocity
+        delta_y = grav_x*const['time']**2+focus_obj[6]*const['time'] # for export
+        delta_z = grav_x*const['time']**2+focus_obj[6]*const['time']
+        coord_i = x + delta_x # new location
+        coord_j = y + delta_y # for export
+        coord_k = z + delta_z
+        set_return = [frame + 1, focus_obj[0], focus_obj[1], focus_obj[2], coord_i, coord_j, coord_k, delta_x, delta_y, delta_z] # queue adds frame
+        anim_set[focus] = set_return
+    queue.put(anim_set)
 
 
-def nLocationUpdate(location, velocity):
-    new_location = [0,0,0]
-    for i in range(3):
-        new_location[i] = location[i] + velocity[i]
-    return new_location
+def pythagorean(x, y, z, dx, dy, dz): # hypotenuse distance between objs' center
+    dist = math.hypot(dx - x, dy - y, dz - z)
+    return dist
+
+
+def vector_gravity(m, f, t, dist): # newtonian gravity, while t = 1
+    acceleration = (-1)*((const['newton'])*m*(f-t))/(((dist**2)+(const['e']**2))**(3/2)) 
+    return acceleration
 
 
 if __name__ == "__main__":
-    queue = mp.Manager().Queue()
     ret = {}
-    export_data_set = []
-    updated_list_of_values = []
-    print("initializing...")
+    anim_set = {}
+    li = []
+    init_l = []
+    export_data = []
+    sample_sum = const['processes_nodes'] * const['samples']
+    print("initializing...") # print
     processes_n = []
+    queue = mp.Manager().Queue()
     queue.put(ret)
-    for i in range(ce_constant['processes_nodes']):
-        p = mp.Process(target=loopContainer, args=(queue, i,))
+    for i in range(const['processes_nodes']):
+        p = mp.Process(target=init_dataset, args=(queue, i,))
         p.start()
         processes_n.append(p)
     for p in processes_n:
         p.join()
     ret = queue.get()
-    updated_list_of_values = list(ret.values())
-    print("done initializing ... now rendering frame(s)")
-
+    init_l = list(ret.values())
+    for initn in range(sample_sum):
+        li.append([1, init_l[initn][0], init_l[initn][3], init_l[initn][4], init_l[initn][5]])
+    export_data.extend(li)
+    pd_dataframe = pd.DataFrame(init_l, columns=["name", "mass", "radius", "lx", "ly", "lz", "vx", "vy", "vz"])
+    pd_dataframe.to_csv(r'C:\init1.csv')
+    print("done initializing ... [now rendering frames]") # print
     core = []
     processes_n = []
-    sample_sum = ce_constant['processes_nodes'] * ce_constant['samples']
-    for i in range(ce_constant['processes_nodes']):
-        i_process_sum = ce_constant['samples'] * i
-        k_process_sum = ce_constant['samples'] * (i + 1)
+    for i in range(const['processes_nodes']):
+        i_process_sum = const['samples'] * i
+        k_process_sum = const['samples'] * (i + 1)
         core.append([i_process_sum, k_process_sum])
-
-    for frame in range(1, ce_constant['frame_total'], ce_constant['frame_interval']):
-        shared_list = mp.Manager().list()
-        for i in range(ce_constant['processes_nodes']):
-            p = mp.Process(target=coreFunction, args=(shared_list, updated_list_of_values, core[i], frame,))
+    for frame in range(1, const['frame_total'] + 1, const['frame_interval']):
+        queue.put(anim_set)
+        for i in range(const['processes_nodes']):
+            p = mp.Process(target=anim_dataset, args=(queue, init_l, core[i], frame,)) # previous_set, anim_set, 
             p.start()
             processes_n.append(p)
         for p in processes_n:
             p.join()
-        
-
-        updated_list_of_values = list(shared_list)
-        
-        appendation = list(shared_list)
-        export_data_set.extend(appendation)
-        print("done with frame ", frame)
-        
-        print(updated_list_of_values[3]) # test print
-
-    pd_dataframe = pd.DataFrame(export_data_set, columns=["frame", "name", "type", "mass", "radius", "location", "velocity"])
-    pd_dataframe.to_csv(r'C:\data.csv')
-    print("done with animation")
-
+        anim_set = queue.get()
+        anim_list = list(ret.values())
+        export_list_temp = [] # building list to extend into animation dataset
+        for n in range(sample_sum): # ["frame", "name", "x", "y", "z"]
+            export_list_temp.append([anim_set[n][0], anim_set[n][1], anim_set[n][4], anim_set[n][5], anim_set[n][6]])
+        export_data.extend(export_list_temp)
+        return_list_temp = [] # building list for internal use in function
+        for m in range(sample_sum): # ["name", "mass", "radius", "lx", "ly", "lz", "vx", "vy", "vz"]
+            return_list_temp.append([anim_set[m][1], anim_set[m][2], anim_set[m][3], anim_set[m][4], anim_set[m][5], anim_set[m][6], anim_set[m][7], anim_set[m][8], anim_set[m][9]])
+        init_l = return_list_temp
+        print("done with frame", frame) # print
+        print(init_l[3]) # test print
+    pd_dataframe = pd.DataFrame(export_data, columns=["frame", "name", "x", "y", "z"])
+    pd_dataframe.to_csv(r'C:\anim1.csv')
+    print("done with animation") # print
