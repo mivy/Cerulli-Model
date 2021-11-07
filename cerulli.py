@@ -106,7 +106,7 @@ if __name__ == "__main__":
     for i in range(len(init_l)): # make first frame anim_set
         anim_set.append([1, init_l[i][0], init_l[i][3], init_l[i][4], init_l[i][5]])
     print(anim_set[3])
-    print("done with frame 1")
+    print("done with frame 0")
     export_data.extend(anim_set)
     core = []
     processes_n = []
