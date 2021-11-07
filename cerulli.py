@@ -10,10 +10,10 @@ const = {
     'newton' : float(6.674080000e-11),  # 6.67408e-11  
     'e' : .11,                          #
     'frame_interval' : 1,               #
-    'frame_total' : 40,                 #
+    'frame_total' : 60,                 #
     'time' : 1,                         #
-    'processes_nodes' : 10,             #
-    'samples' : 100,                    #
+    'processes_nodes' : 1,             #
+    'samples' : 6,                    #
     'mass_p_law' : -4.5,                #
     'mass_scalar' : 100000,             #
     'location_scalar' : 3,              #
@@ -56,9 +56,7 @@ def anim_dataset(queue, history, core, frame): # columns=["frame", "name", "vx",
     anim_set = queue.get()
     for focus in range(core[0], core[1]): # total indicies counted here
         focus_obj = history[focus] # and call its values
-        grav_x = 0 # reset gravity 
-        grav_y = 0 # while new f
-        grav_z = 0
+        grav = [0,0,0]
         x = focus_obj[3] # focus location 
         y = focus_obj[4] # variables
         z = focus_obj[5]
@@ -71,12 +69,10 @@ def anim_dataset(queue, history, core, frame): # columns=["frame", "name", "vx",
             dy = target_obj[4]
             dz = target_obj[5]
             dist = pythagorean(x, y, z, dx, dy, dz) 
-            grav_x = vector_gravity(dm, x, dx, dist) + grav_x # gravitational influiences
-            grav_y = vector_gravity(dm, y, dy, dist) + grav_y # on f for range t
-            grav_z = vector_gravity(dm, z, dz, dist) + grav_z
-        delta_x = grav_x*const['time']**2+focus_obj[6]*const['time'] # new velocity
-        delta_y = grav_x*const['time']**2+focus_obj[6]*const['time'] # for export
-        delta_z = grav_x*const['time']**2+focus_obj[6]*const['time']
+            grav = vector_gravity(dm, x, dx, y, dy, z, dz, dist, grav)
+        delta_x = grav[0]*const['time']**2+focus_obj[7]*const['time'] # new velocity
+        delta_y = grav[1]*const['time']**2+focus_obj[8]*const['time'] # for export
+        delta_z = grav[2]*const['time']**2+focus_obj[9]*const['time']
         coord_i = x + delta_x # new location
         coord_j = y + delta_y # for export
         coord_k = z + delta_z
@@ -86,13 +82,16 @@ def anim_dataset(queue, history, core, frame): # columns=["frame", "name", "vx",
 
 
 def pythagorean(x, y, z, dx, dy, dz): # hypotenuse distance between objs' center
-    dist = math.hypot(dx - x, dy - y, dz - z)
+    dist = math.hypot(dx - x, dy - y, dz - z) # working
     return dist
 
 
-def vector_gravity(m, f, t, dist): # newtonian gravity, while t = 1
-    acceleration = (-1)*((const['newton'])*m*(f-t))/(((dist**2)+(const['e']**2))**(3/2)) 
-    return acceleration
+def vector_gravity(m, x, dx, y, dy, z, dz, dist, gravity): # newtonian gravity, while t = 1
+    acc_x = (-1)*((const['newton'])*m*(x-dx))/(((dist**2)+(const['e']**2))**(3/2)) 
+    acc_y = (-1)*((const['newton'])*m*(y-dy))/(((dist**2)+(const['e']**2))**(3/2)) 
+    acc_z = (-1)*((const['newton'])*m*(z-dz))/(((dist**2)+(const['e']**2))**(3/2)) 
+    gravity = [acc_x + gravity[0], acc_y + gravity[1], acc_z + gravity[2]]
+    return gravity
 
 
 if __name__ == "__main__":
@@ -118,7 +117,7 @@ if __name__ == "__main__":
         li.append([1, init_l[initn][0], init_l[initn][3], init_l[initn][4], init_l[initn][5]])
     export_data.extend(li)
     pd_dataframe = pd.DataFrame(init_l, columns=["name", "mass", "radius", "lx", "ly", "lz", "vx", "vy", "vz"])
-    pd_dataframe.to_csv(r'C:\init1.csv')
+    pd_dataframe.to_csv(r'N:\init1.csv')
     print("done initializing ... [now rendering frames]") # print
     core = []
     processes_n = []
@@ -144,7 +143,8 @@ if __name__ == "__main__":
         for m in range(sample_sum): # ["name", "mass", "radius", "lx", "ly", "lz", "vx", "vy", "vz"]
             return_list_temp.append([anim_set[m][1], anim_set[m][2], anim_set[m][3], anim_set[m][4], anim_set[m][5], anim_set[m][6], anim_set[m][7], anim_set[m][8], anim_set[m][9]])
         init_l = return_list_temp
+        print(init_l[3])
         print("done with frame", frame) # print
     pd_dataframe = pd.DataFrame(export_data, columns=["frame", "name", "x", "y", "z"])
-    pd_dataframe.to_csv(r'C:\anim1.csv')
+    pd_dataframe.to_csv(r'N:\anim1.csv')
     print("done with animation") # print
