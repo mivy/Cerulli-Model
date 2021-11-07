@@ -6,7 +6,7 @@ import pandas as pd
 
 ce_constant = {
     'frame_interval' : 1,               #
-    'frame_total' : 40,                 #
+    'frame_total' : 60,                 #
     'processes_nodes' : 10,             # 4, 40
     'samples' : 100,                    # 250, 250
     }   
