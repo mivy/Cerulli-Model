@@ -13,12 +13,10 @@ const = {
     'frame_total' : 60,                 #
     'time' : 1,                         #
     'processes_nodes' : 10,             #
-    'samples' : 10,                     #
-    'mass_p_law' : -4.0,                # -4.5 def
+    'samples' : 100,                    #
+    'mass_p_law' : -4.5,                # -4.5 def
     'mass_scalar' : 100000,             #
     'location_scalar' : 3,              #
-    'velocity_scalar' : 1,              #
-    'radius_scalar' : .00001,           # includes radius for volume scatter shader //i.e. cosmic dust
     }
 
 
@@ -32,14 +30,13 @@ def init_dataset(queue, i): # columns=["name", "type", "mass", "radius", "lx", "
     for k in range(const['samples']): # total indicies counted here
         list_index = index_counter(i, k) # counter for the name trait
         set_name = f'n_{list_index}'
-        set_mass = mass_distribution()
-        set_vrad = abs(set_mass) * const['radius_scalar']
+        set_mass, set_vrad = mass_distribution()
         coord_i = np.random.default_rng().standard_normal() * const['location_scalar']
         coord_j = np.random.default_rng().standard_normal() * const['location_scalar']
         coord_k = np.random.default_rng().standard_normal() * const['location_scalar']
-        delta_x = 0 # coord_i * const['velocity_scalar']
-        delta_y = 0 # coord_j * const['velocity_scalar']
-        delta_z = 0 # coord_k * const['velocity_scalar']
+        delta_x = 0
+        delta_y = 0
+        delta_z = 0
         initial_set = [set_name, set_mass, set_vrad, coord_i, coord_j, coord_k, delta_x, delta_y, delta_z]
         ret[list_index] = initial_set # return thread result
     queue.put(ret) # return process result
@@ -49,7 +46,8 @@ def mass_distribution(): # truncated power law for m
     x = abs(np.random.default_rng().standard_normal())
     t = 1 + 1 / x ** const['mass_p_law']
     t = t * const['mass_scalar']
-    return t
+    r = (1+x/2)/100
+    return t, r
 
 
 def anim_dataset(shared_list, history, core, frame): # columns=["frame", "name", "vx", "vy", "vz"] previous_set, anim_set, 
