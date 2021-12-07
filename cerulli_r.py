@@ -122,6 +122,7 @@ def function_ii(queue_l, rset, i, j, nullif): # [name, mass, radius, shader, cx,
             gx, gy, gz = 0, 0, 0
             cx, cy, cz = 0, 0, 0
             rx, ry, rz = 0, 0, 0
+            kx, ky, kz = 0, 0, 0
 
             id_target = rset[m][0]
             mass_target = rset[m][1]
@@ -165,7 +166,7 @@ def function_ii(queue_l, rset, i, j, nullif): # [name, mass, radius, shader, cx,
                 foo = [[id_target, id_refer, distance]] # NOTE to flip [target] and [reference]
                 r.extend(foo)
 
-            coldetect = ( radius_refer + radius_target ) * 2e16
+            coldetect = ( radius_refer + radius_target ) * 2e10
 
             if distance <= coldetect:
 
